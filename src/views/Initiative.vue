@@ -2,8 +2,9 @@
   <div id="initiative-view">
 
     <div>Status: {{ connectionState }}</div>
-    <div>
-      <q-btn @click="connectToWebSocket" color="primary">Connect</q-btn>
+    <div class="flex gap-1">
+      <q-input label="Server" dark v-model="connectionURL"/>
+      <div class="center-button"><q-btn @click="connectToWebSocket" color="primary">Connect</q-btn></div>
     </div>
 
     <div class="initiative-actions">
@@ -41,6 +42,7 @@
 <script setup lang="ts">
 import {computed, onBeforeUnmount, onMounted, Ref, ref} from "vue";
 
+const connectionURL = ref('ws://dnd-initiative.astralibra.ch:8080');
 enum Command {
   Add = 'add',
   Next = 'next',
@@ -86,7 +88,7 @@ function addPlayer() {
   }
 }
 
-function removePlayer(event: MouseEvent) {
+function removePlayer(event: Event) {
   const target = event.target as HTMLSpanElement;
   console.log(target);
   const playerName: string | undefined = target?.parentElement?.parentElement?.dataset.playerName;
@@ -132,7 +134,7 @@ function handleReceiveMessageFromSocket(message: MessageEvent) {
 function connectToWebSocket() {
   webSocket.value?.close();
 
-  webSocket.value = new WebSocket('ws://localhost:8080');
+  webSocket.value = new WebSocket(connectionURL.value);
 
   webSocket.value?.addEventListener('message', handleReceiveMessageFromSocket);
 

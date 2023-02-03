@@ -3,7 +3,7 @@
     <q-header>
       <q-toolbar>
         <q-btn dense flat round icon="menu" @click="leftDrawerIsOpen = !leftDrawerIsOpen"/>
-        <q-toolbar-title>Combatulator</q-toolbar-title>
+        <q-toolbar-title>The Combatulator</q-toolbar-title>
       </q-toolbar>
     </q-header>
 

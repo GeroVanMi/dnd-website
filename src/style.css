@@ -14,3 +14,7 @@
   -moz-osx-font-smoothing: grayscale;
   -webkit-text-size-adjust: 100%;
 }
+
+.gap-1 {
+  gap: 1rem;
+}
