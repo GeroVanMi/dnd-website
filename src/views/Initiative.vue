@@ -43,7 +43,7 @@
 <script setup lang="ts">
 import {computed, onBeforeUnmount, onMounted, Ref, ref} from "vue";
 
-const connectionURL = ref('ws://dnd-service.astralibra.ch:9002');
+const connectionURL = ref('wss://dnd-service.astralibra.ch');
 // const connectionURL = ref('ws://localhost:9002');
 enum Command {
   Add = 'add',
