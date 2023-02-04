@@ -14,6 +14,7 @@
 
     <div class="initiative-inputs">
       <q-input label="Player Name" dark v-model="newPlayerName"/>
+      <q-input label="Initiative" dark type="number" v-model="initiative"/>
       <div class="center-button">
         <q-btn color="green" @click="addPlayer">Add</q-btn>
       </div>
@@ -22,13 +23,13 @@
     <div>
       <q-list>
         <TransitionGroup name="initiative-list">
-          <q-item class="initiative-item" v-for="entity in initiativeList" :key="entity">
-            <q-item-section>{{ entity }}</q-item-section>
+          <q-item class="initiative-item" v-for="player in initiativeList" :key="player.name">
+            <q-item-section>{{ player.name }} ({{player.initiative}} initiative)</q-item-section>
             <q-item-section avatar>
               <q-btn
                   @click="removePlayer"
                   color="red"
-                  :data-player-name="entity"
+                  :data-player-name="player.name"
                   icon="delete"
                   />
             </q-item-section>
@@ -42,7 +43,8 @@
 <script setup lang="ts">
 import {computed, onBeforeUnmount, onMounted, Ref, ref} from "vue";
 
-const connectionURL = ref('ws://dnd-initiative.astralibra.ch:8080');
+const connectionURL = ref('ws://dnd-service.astralibra.ch:9002');
+// const connectionURL = ref('ws://localhost:9002');
 enum Command {
   Add = 'add',
   Next = 'next',
@@ -53,7 +55,11 @@ enum Command {
 let webSocket: Ref<WebSocket | undefined> = ref(undefined);
 
 const newPlayerName = ref('');
-const initiativeList = ref<string[]>([]);
+const initiative = ref(10);
+
+// The initiative list cannot be an object (= has to be a string) since this breaks the list animation for some reason.
+// It would be nice to know why that happens.
+const initiativeList = ref<Player[]>([]);
 
 const connectionState = computed(() => {
   if (webSocket.value === undefined) {
@@ -83,7 +89,10 @@ function returnToPreviousPlayer() {
 
 function addPlayer() {
   if (newPlayerName.value !== '') {
-    sendWebSocketCommand(Command.Add, newPlayerName.value);
+    sendWebSocketCommand(Command.Add, {
+      name: newPlayerName.value,
+      initiative: initiative.value
+    });
     newPlayerName.value = '';
   }
 }
@@ -100,18 +109,16 @@ function removePlayer(event: Event) {
 function handleKeyUpEvent(event: KeyboardEvent) {
   if (event.key === 'Enter') {
     continueToNextPlayer();
-  } else if (event.key === 'Backspace') {
-    returnToPreviousPlayer();
   }
 }
 
-function sendWebSocketCommand(command: Command, data?: string) {
-  let body = command.toString();
-  if (data != null) {
-    body += ' ' + data;
-  }
+function sendWebSocketCommand(command: Command, data?: string | object) {
+  let body = {
+    command: command.toString(),
+    data: data,
+  };
 
-  webSocket.value?.send(body);
+  webSocket.value?.send(JSON.stringify(body));
 }
 
 onMounted(() => {
@@ -124,9 +131,15 @@ onBeforeUnmount(() => {
   webSocket.value?.close();
 });
 
+type Player = {
+  name: string,
+  initiative: number,
+}
+
 function handleReceiveMessageFromSocket(message: MessageEvent) {
-  const receivedMessage = JSON.parse(message.data);
+  const receivedMessage: Player[] = JSON.parse(message.data);
   if (Array.isArray(receivedMessage)) {
+    console.log(receivedMessage.map(player => `${player.name}`));
     initiativeList.value = receivedMessage;
   }
 }
