@@ -4,7 +4,9 @@
     <div>Status: {{ connectionState }}</div>
     <div class="flex gap-1">
       <q-input label="Server" dark v-model="connectionURL"/>
-      <div class="center-button"><q-btn @click="connectToWebSocket" color="primary">Connect</q-btn></div>
+      <div class="center-button">
+        <q-btn @click="connectToWebSocket" color="primary">Connect</q-btn>
+      </div>
     </div>
 
     <div class="initiative-actions">
@@ -24,14 +26,17 @@
       <q-list>
         <TransitionGroup name="initiative-list">
           <q-item class="initiative-item" v-for="player in initiativeList" :key="player.name">
-            <q-item-section>{{ player.name }} ({{player.initiative}} initiative)</q-item-section>
+            <q-item-section avatar>
+              <q-icon color="yellow" :name="topOfTheRoundPlayer === player ? 'star' : ''"/>
+            </q-item-section>
+            <q-item-section>{{ player.name }} ({{ player.initiative }} initiative)</q-item-section>
             <q-item-section avatar>
               <q-btn
                   @click="removePlayer"
                   color="red"
                   :data-player-name="player.name"
                   icon="delete"
-                  />
+              />
             </q-item-section>
           </q-item>
         </TransitionGroup>
@@ -45,6 +50,7 @@ import {computed, onBeforeUnmount, onMounted, Ref, ref} from "vue";
 
 const connectionURL = ref('wss://dnd-service.astralibra.ch');
 // const connectionURL = ref('ws://localhost:9002');
+
 enum Command {
   Add = 'add',
   Next = 'next',
@@ -79,6 +85,22 @@ const connectionState = computed(() => {
 })
 
 
+const topOfTheRoundPlayer = computed(() => {
+  if (initiativeList.value.length === 0) {
+    return undefined;
+  }
+
+  let topOfTheRoundPlayer = initiativeList.value[0];
+
+  for (const player of initiativeList.value) {
+    if (player.initiative > topOfTheRoundPlayer.initiative) {
+      topOfTheRoundPlayer = player;
+    }
+  }
+
+  return topOfTheRoundPlayer;
+});
+
 function continueToNextPlayer() {
   sendWebSocketCommand(Command.Next);
 }
@@ -99,7 +121,6 @@ function addPlayer() {
 
 function removePlayer(event: Event) {
   const target = event.target as HTMLSpanElement;
-  console.log(target);
   const playerName: string | undefined = target?.parentElement?.parentElement?.dataset.playerName;
   if (playerName != null) {
     sendWebSocketCommand(Command.Remove, playerName);
@@ -139,7 +160,6 @@ type Player = {
 function handleReceiveMessageFromSocket(message: MessageEvent) {
   const receivedMessage: Player[] = JSON.parse(message.data);
   if (Array.isArray(receivedMessage)) {
-    console.log(receivedMessage.map(player => `${player.name}`));
     initiativeList.value = receivedMessage;
   }
 }
