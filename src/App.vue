@@ -7,29 +7,7 @@
       </q-toolbar>
     </q-header>
 
-    <q-drawer
-        show-if-above
-        dark
-        v-model="leftDrawerIsOpen"
-        side="left"
-        :width="200"
-        :breakpoint="500"
-    >
-      <!-- drawer content -->
-      <q-list>
-        <q-item>
-          <q-item-section>Navigation</q-item-section>
-        </q-item>
-        <q-separator dark/>
-
-        <q-item class="" v-for="route in routes" :to="route.destination" clickable v-ripple>
-          <q-item-section avatar>
-            <q-icon :name="route.icon"/>
-          </q-item-section>
-          <q-item-section>{{ route.name }}</q-item-section>
-        </q-item>
-      </q-list>
-    </q-drawer>
+    <navigation-drawer :is-open="leftDrawerIsOpen"/>
 
     <q-page-container>
       <div class="content">
@@ -47,28 +25,10 @@
 
 <script setup lang="ts">
 import DiceRoll from "./components/DiceRoll.vue";
+import NavigationDrawer from "./components/NavigationDrawer.vue";
 import {ref} from "vue";
 
 const leftDrawerIsOpen = ref(false);
-
-interface Route {
-  name: string,
-  destination: string,
-  icon: string,
-}
-
-const routes: Route[] = [
-  {
-    name: 'Initiative',
-    destination: '/',
-    icon: 'security',
-  },
-  {
-    name: 'Probabilities',
-    destination: '/probability',
-    icon: 'leaderboard',
-  }
-];
 </script>
 
 
