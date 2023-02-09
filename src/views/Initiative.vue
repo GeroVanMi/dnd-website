@@ -52,10 +52,17 @@ const connectionURL = ref('wss://dnd-service.astralibra.ch');
 // const connectionURL = ref('ws://localhost:9002');
 
 enum Command {
-  Add = 'add',
-  Next = 'next',
-  Previous = 'previous',
-  Remove = 'remove',
+  ADD = 'add',
+  NEXT = 'next',
+  PREVIOUS = 'previous',
+  REMOVE = 'remove',
+}
+
+enum STATE {
+  CONNECTING = 0,
+  CONNECTED = 1,
+  DISCONNECTING = 2,
+  DISCONNECTED = 3,
 }
 
 let webSocket: Ref<WebSocket | undefined> = ref(undefined);
@@ -73,17 +80,16 @@ const connectionState = computed(() => {
   }
 
   switch (webSocket.value.readyState) {
-    case 0:
+    case STATE.CONNECTING:
       return 'Connecting';
-    case 1:
+    case STATE.CONNECTED:
       return 'Connected';
-    case 2:
+    case STATE.DISCONNECTING:
       return 'Disconnecting';
-    case 3:
+    case STATE.DISCONNECTED:
       return 'Disconnected';
   }
-})
-
+});
 
 const topOfTheRoundPlayer = computed(() => {
   if (initiativeList.value.length === 0) {
@@ -101,17 +107,26 @@ const topOfTheRoundPlayer = computed(() => {
   return topOfTheRoundPlayer;
 });
 
+/**
+ * Sends the web socket command to move to the player with the next-lower initiative or to the top of the round.
+ */
 function continueToNextPlayer() {
-  sendWebSocketCommand(Command.Next);
+  sendWebSocketCommand(Command.NEXT);
 }
 
+/**
+ * Undo the last continue command.
+ */
 function returnToPreviousPlayer() {
-  sendWebSocketCommand(Command.Previous);
+  sendWebSocketCommand(Command.PREVIOUS);
 }
 
+/**
+ * Sends the command to add a new player together with their name and initiative.
+ */
 function addPlayer() {
   if (newPlayerName.value !== '') {
-    sendWebSocketCommand(Command.Add, {
+    sendWebSocketCommand(Command.ADD, {
       name: newPlayerName.value,
       initiative: initiative.value
     });
@@ -119,18 +134,35 @@ function addPlayer() {
   }
 }
 
+/**
+ * Remove a player by their name. (Uses the data attribute)
+ * @param event
+ */
 function removePlayer(event: Event) {
   const target = event.target as HTMLSpanElement;
   const playerName: string | undefined = target?.parentElement?.parentElement?.dataset.playerName;
   if (playerName != null) {
-    sendWebSocketCommand(Command.Remove, playerName);
+    sendWebSocketCommand(Command.REMOVE, playerName);
   }
 }
 
+/**
+ * When the user presses enter, the initiative continues to the next player.
+ * @param event
+ */
 function handleKeyUpEvent(event: KeyboardEvent) {
   if (event.key === 'Enter') {
     continueToNextPlayer();
   }
+}
+
+/**
+ * When the site goes into background it disconnects the websocket after a while.
+ * This function reconnects it when it comes back to visibility.
+ * @param _
+ */
+function handleVisibilityChangeEvent(_: Event) {
+  connectToWebSocket();
 }
 
 function sendWebSocketCommand(command: Command, data?: string | object) {
@@ -144,11 +176,13 @@ function sendWebSocketCommand(command: Command, data?: string | object) {
 
 onMounted(() => {
   document.addEventListener('keyup', handleKeyUpEvent);
+  document.addEventListener('visibilitychange', handleVisibilityChangeEvent)
   connectToWebSocket();
 });
 
 onBeforeUnmount(() => {
   document.removeEventListener('keyup', handleKeyUpEvent);
+  document.removeEventListener('visibilitychange', handleVisibilityChangeEvent);
   webSocket.value?.close();
 });
 
@@ -157,6 +191,10 @@ type Player = {
   initiative: number,
 }
 
+/**
+ * Updates the player initiative list when it receives a message from the websocket.
+ * @param message
+ */
 function handleReceiveMessageFromSocket(message: MessageEvent) {
   const receivedMessage: Player[] = JSON.parse(message.data);
   if (Array.isArray(receivedMessage)) {
@@ -164,8 +202,14 @@ function handleReceiveMessageFromSocket(message: MessageEvent) {
   }
 }
 
-function connectToWebSocket() {
-  webSocket.value?.close();
+/**
+ * Connects to the websocket running on the connectionURL.
+ */
+function connectToWebSocket(): void {
+  // If we are still connected, don't close and re-open the connection and instead just return.
+  if (webSocket.value && webSocket.value.readyState === STATE.CONNECTED) {
+    return;
+  }
 
   webSocket.value = new WebSocket(connectionURL.value);
 
