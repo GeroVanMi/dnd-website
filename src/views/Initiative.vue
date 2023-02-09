@@ -1,14 +1,5 @@
 <template>
   <div id="initiative-view">
-
-    <div>Status: {{ connectionState }}</div>
-    <div class="flex gap-1">
-      <q-input label="Server" dark v-model="connectionURL"/>
-      <div class="center-button">
-        <q-btn @click="connectToWebSocket" color="primary">Connect</q-btn>
-      </div>
-    </div>
-
     <div class="initiative-actions">
       <q-btn color="orange" @click="returnToPreviousPlayer" icon="keyboard_arrow_left">Previous</q-btn>
       <q-btn color="green" @click="continueToNextPlayer" icon-right="keyboard_arrow_right">Next</q-btn>
@@ -23,6 +14,21 @@
     </div>
 
     <div>
+
+      <q-item>
+        <q-item-section class="text-h6">Initiative List</q-item-section>
+        <q-item-section avatar>
+          <q-btn
+              fab-mini
+              flat
+              :color="connectionIcon === 'network_wifi' ? 'green' : 'red'"
+              :icon-right="connectionIcon"
+              @click="connectToWebSocket"
+          >
+            <q-tooltip>{{ connectionState }}</q-tooltip>
+          </q-btn>
+        </q-item-section>
+      </q-item>
       <q-list>
         <TransitionGroup name="initiative-list">
           <q-item class="initiative-item" v-for="player in initiativeList" :key="player.name">
@@ -89,6 +95,13 @@ const connectionState = computed(() => {
     case STATE.DISCONNECTED:
       return 'Disconnected';
   }
+});
+
+const connectionIcon = computed(() => {
+  if (webSocket.value === undefined || webSocket.value.readyState !== STATE.CONNECTED) {
+    return 'signal_wifi_bad';
+  }
+  return 'network_wifi';
 });
 
 const topOfTheRoundPlayer = computed(() => {
